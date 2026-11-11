@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Campus Heatmap &bull; DengueWatch{% endblock %}
+
+{% block content %}
+<div class="container py-3">
+  <!-- Top bar info & action -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+    <div>
+      <h1 class="h3 mb-1 text-dark fw-bold">Campus Risk Heatmap</h1>
+      <p class="text-secondary small mb-0">
+        Live campus hotspot density from verified and active community reports.
+      </p>
+    </div>
+    <div>
+      {% if actor.is_authenticated %}
+        <a href="{% url 'report_create' %}" class="btn btn-danger btn-lg px-3 fw-semibold shadow-sm">
+          🦟 Report Mosquito Activity
+        </a>
+      {% else %}
+        <a href="#report-gate-modal" class="btn btn-danger btn-lg px-3 fw-semibold shadow-sm">
+          🦟 Report Mosquito Activity
+        </a>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Map Card -->
+  <div class="map-wrapper">
+    <div id="campus-map"></div>
+
+    <!-- Responsive Legend -->
+    <div class="map-legend-bar">
+      <span class="fw-semibold text-secondary">Legend:</span>
+      <span class="legend-chip">
+        <span class="legend-dot" style="background-color: #dc3545;"></span>
+        Reported Hotspot
+      </span>
+      <span class="legend-chip">
+        <span class="badge" style="background: linear-gradient(90deg, blue, lime, yellow, red); width: 60px; height: 10px; display: inline-block;"></span>
+        Heat Density
+      </span>
+      <span class="legend-chip">
+        <span style="border-bottom: 2.5px solid #198754; width: 22px; display: inline-block;"></span>
+        Campus Boundary
+      </span>
+      <span class="legend-chip">
+        <span style="border-bottom: 2px dashed #0d6efd; width: 22px; display: inline-block;"></span>
+        1 km Buffer
+      </span>
+      <span class="ms-auto text-muted small">
+        Active Reports: <strong>{{ report_count }}</strong>
+      </span>
+    </div>
+  </div>
+</div>
+
+<!-- Native CSS Modal (:target) for Unauthenticated Report Button Click (Agent.md 8.1) -->
+<div id="report-gate-modal" class="native-modal">
+  <a href="#" class="native-modal-backdrop" aria-label="Close modal"></a>
+  <div class="native-modal-card">
+    <div class="native-modal-header">
+      <h5 class="modal-title h5 mb-0 fw-bold">Sign In Required</h5>
+      <a href="#" class="native-modal-close" aria-label="Close modal">&times;</a>
+    </div>
+    <div class="native-modal-body">
+      <div class="text-center mb-3">
+        <span style="font-size: 2.5rem;">🦟</span>
+      </div>
+      <p class="mb-2">
+        To submit a mosquito activity report and prevent spam, please log in with your campus account or register.
+      </p>
+      <p class="text-muted small mb-0">
+        Reports help campus authorities identify high-risk standing water, mosquito clusters, and bite incidents for swift mitigation.
+      </p>
+    </div>
+    <div class="native-modal-footer">
+      <a href="{% url 'login' %}?next={% url 'report_create' %}" class="btn btn-primary px-3">
+        Sign In
+      </a>
+      <a href="{% url 'register' %}?next={% url 'report_create' %}" class="btn btn-outline-secondary px-3">
+        Register
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+{{ reports_data|json_script:"reports-json" }}
+{{ campus_boundary|json_script:"boundary-json" }}
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var boundaryData = JSON.parse(document.getElementById('boundary-json').textContent);
+    var reportsData = JSON.parse(document.getElementById('reports-json').textContent);
+
+    var centerLat = boundaryData.center_lat || 23.759973;
+    var centerLng = boundaryData.center_lng || 90.348976;
+
+    var map = CampusMap.initMap('campus-map', centerLat, centerLng, 16, boundaryData);
+    if (map) {
+      CampusMap.renderHeat(map, reportsData);
+    }
+  });
+</script>
+{% endblock %}
+
